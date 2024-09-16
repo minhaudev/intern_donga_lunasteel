@@ -13,12 +13,15 @@ export default router.use(
   validator(schema.apiKey, ValidationSource.HEADER),
   asyncHandler(async (req: PublicRequest, res, next) => {
     const key = req.headers[Header.API_KEY]?.toString();
+    console.log('key', key);
     if (!key) throw new ForbiddenError();
 
     const apiKey = await ApiKeyRepo.findByKey(key);
+    console.log('apikey', apiKey);
     if (!apiKey) throw new ForbiddenError();
 
     req.apiKey = apiKey;
+    console.log('sfsds', req.apiKey);
     return next();
   }),
 );

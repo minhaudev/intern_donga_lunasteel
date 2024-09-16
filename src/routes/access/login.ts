@@ -1,5 +1,5 @@
 import express from 'express';
-import { SuccessResponse } from '../../core/ApiResponse';
+import { BadRequestResponse, SuccessResponse } from '../../core/ApiResponse';
 import crypto from 'crypto';
 import UserRepo from '../../database/repository/UserRepo';
 import { BadRequestError, AuthFailureError } from '../../core/ApiError';
@@ -15,7 +15,7 @@ import { PublicRequest } from '../../types/app-request';
 const router = express.Router();
 
 router.post(
-  '/basic',
+  '/login',
   validator(schema.credential),
   asyncHandler(async (req: PublicRequest, res) => {
     const user = await UserRepo.findByEmail(req.body.email);
@@ -31,11 +31,15 @@ router.post(
     await KeystoreRepo.create(user, accessTokenKey, refreshTokenKey);
     const tokens = await createTokens(user, accessTokenKey, refreshTokenKey);
     const userData = await getUserData(user);
-
-    new SuccessResponse('Login Success', {
-      user: userData,
-      tokens: tokens,
-    }).send(res);
+    // console.log('userData', userData);
+    if (userData) {
+      new SuccessResponse('Login Success', {
+        user: userData,
+        tokens: tokens,
+      }).send(res);
+    } else {
+      new BadRequestResponse('Authentication failure').send(res);
+    }
   }),
 );
 

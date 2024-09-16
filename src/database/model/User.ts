@@ -1,71 +1,125 @@
 import { model, Schema, Types } from 'mongoose';
-import Role from './Role';
 
+// Tên tài liệu và bộ sưu tập MongoDB
 export const DOCUMENT_NAME = 'User';
 export const COLLECTION_NAME = 'users';
 
+// Định nghĩa giao diện cho User
 export default interface User {
   _id: Types.ObjectId;
-  name?: string;
-  profilePicUrl?: string;
-  email?: string;
-  password?: string;
-  roles: Role[];
-  verified?: boolean;
-  status?: boolean;
-  createdAt?: Date;
-  updatedAt?: Date;
+  employeeId: string;
+  email: string;
+  password: string;
+  fullname: string;
+  birthday: Date;
+  gender: 'male' | 'female';
+  phone: string;
+  avatar: string;
+    departmentId: Types.ObjectId;
+    roles: Types.ObjectId[];
+  emailVerifiedAt?: Date | null;
+  accessToken: string;
+  refreshToken: string;
+  status: 'active' | 'inactive';
+  leftBranch: string;
+  rightBranch: string;
+  isDeleted: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
-const schema = new Schema<User>(
+// Định nghĩa schema cho User
+const userSchema = new Schema<User>(
   {
-    name: {
+    employeeId: {
       type: Schema.Types.String,
-      trim: true,
-      maxlength: 200,
-    },
-    profilePicUrl: {
-      type: Schema.Types.String,
-      trim: true,
+      // required: true,
+      unique: true,
     },
     email: {
       type: Schema.Types.String,
+      required: true,
       unique: true,
-      sparse: true, // allows null
       trim: true,
-      select: false,
     },
     password: {
       type: Schema.Types.String,
-      select: false,
-    },
-    roles: {
-      type: [
-        {
-          type: Schema.Types.ObjectId,
-          ref: 'Role',
-        },
-      ],
       required: true,
-      select: false,
     },
-    verified: {
-      type: Schema.Types.Boolean,
-      default: false,
+    fullname: {
+      type: Schema.Types.String,
+      required: true,
+      trim: true,
+    },
+    birthday: {
+      type: Schema.Types.Date,
+      // required: true,
+    },
+    gender: {
+      type: Schema.Types.String,
+      enum: ['male', 'female'],
+      // required: true,
+    },
+    phone: {
+      type: Schema.Types.String,
+      // required: true,
+    },
+    avatar: {
+      type: Schema.Types.String,
+      // required: true,
+    },
+  
+    departmentId: {
+         type: Schema.Types.ObjectId,
+          ref: 'Department',
+          // required: true,
+        },
+        roles: [
+          {
+            type: Schema.Types.ObjectId,
+            ref: 'Role',
+            required: true,
+          },
+        ],
+  
+    emailVerifiedAt: {
+      type: Schema.Types.Date,
+      default: null,
+    },
+    accessToken: {
+      type: Schema.Types.String,
+      required: true,
+    },
+    refreshToken: {
+      type: Schema.Types.String,
+      required: true,
     },
     status: {
+      type: Schema.Types.String,
+      enum: ['active', 'inactive'],
+      // required: true,
+    },
+    leftBranch: {
+      type: Schema.Types.String,
+      // required: true,
+    },
+    rightBranch: {
+      type: Schema.Types.String,
+      // required: true,
+    },
+    isDeleted: {
       type: Schema.Types.Boolean,
-      default: true,
+      // default: false,
     },
     createdAt: {
       type: Schema.Types.Date,
       required: true,
-      select: false,
+      default: Date.now,
     },
     updatedAt: {
       type: Schema.Types.Date,
       required: true,
-      select: false,
+      default: Date.now,
     },
   },
   {
@@ -73,8 +127,11 @@ const schema = new Schema<User>(
   },
 );
 
-schema.index({ _id: 1, status: 1 });
-schema.index({ email: 1 });
-schema.index({ status: 1 });
+// Indexes để tối ưu hóa truy vấn
+userSchema.index({ employeeId: 1 });
+userSchema.index({ email: 1 });
+userSchema.index({ status: 1 });
+userSchema.index({ isDeleted: 1 });
 
-export const UserModel = model<User>(DOCUMENT_NAME, schema, COLLECTION_NAME);
+// Xuất mô hình User
+export const UserModel = model<User>(DOCUMENT_NAME, userSchema, COLLECTION_NAME);

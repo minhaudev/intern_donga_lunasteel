@@ -28,22 +28,22 @@ router.get(
   }),
 );
 
-router.put(
-  '/',
-  validator(schema.profile),
-  asyncHandler(async (req: ProtectedRequest, res) => {
-    const user = await UserRepo.findPrivateProfileById(req.user._id);
-    if (!user) throw new BadRequestError('User not registered');
+// router.put(
+//   '/',
+//   validator(schema.profile),
+//   asyncHandler(async (req: ProtectedRequest, res) => {
+//     const user = await UserRepo.findPrivateProfileById(req.user._id);
+//     if (!user) throw new BadRequestError('User not registered');
 
-    if (req.body.name) user.name = req.body.name;
-    if (req.body.profilePicUrl) user.profilePicUrl = req.body.profilePicUrl;
+//     if (req.body.name) user.name = req.body.name;
+//     if (req.body.profilePicUrl) user.profilePicUrl = req.body.profilePicUrl;
 
-    await UserRepo.updateInfo(user);
+//     await UserRepo.updateInfo(user);
 
-    const data = _.pick(user, ['name', 'profilePicUrl']);
+//     const data = _.pick(user, ['name', 'profilePicUrl']);
 
-    return new SuccessResponse('Profile updated', data).send(res);
-  }),
-);
+//     return new SuccessResponse('Profile updated', data).send(res);
+//   }),
+// );
 
 export default router;
