@@ -2,7 +2,6 @@ import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 import { BadRequestError } from '../core/ApiError';
 import { Types } from 'mongoose';
-
 export enum ValidationSource {
   BODY = 'body',
   HEADER = 'headers',
@@ -49,3 +48,31 @@ export default (
       next(error);
     }
   };
+
+// validate id
+
+async function findFieldsById(
+  id: Types.ObjectId,
+  model: any,
+): Promise<any | null> {
+  return model.findOne({ _id: id }).lean().exec();
+}
+export const validateIds = async (ids: string[], model: any) => {
+  const invalidIds: string[] = [];
+
+  for (const id of ids) {
+    if (!Types.ObjectId.isValid(id)) {
+      invalidIds.push(id);
+      continue; // Bỏ qua kiểm tra tồn tại nếu ID không hợp lệ
+    }
+
+    const exists = await findFieldsById(new Types.ObjectId(id), model);
+    if (!exists) {
+      invalidIds.push(id);
+    }
+  }
+
+  if (invalidIds.length > 0) {
+    throw new BadRequestError(`Invalid IDs found: ${invalidIds.join(', ')}`);
+  }
+};

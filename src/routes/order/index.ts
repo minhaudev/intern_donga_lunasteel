@@ -1,24 +1,28 @@
 import express from 'express';
-import KeystoreRepo from '../../database/repository/KeystoreRepo';
+import { SuccessResponse } from '../../core/ApiResponse';
+import UserRepo from '../../database/repository/UserRepo';
 import { ProtectedRequest } from 'app-request';
-import { SuccessMsgResponse } from '../../core/ApiResponse';
+import { BadRequestError } from '../../core/ApiError';
+import validator from '../../helpers/validator';
 import asyncHandler from '../../helpers/asyncHandler';
+import _ from 'lodash';
 import authentication from '../../auth/authentication';
 import permission from '../../helpers/permissionGeneral';
+
 const router = express.Router();
 
 /*-------------------------------------------------------------------------*/
 // router.use(authentication);
 /*-------------------------------------------------------------------------*/
 
-router.delete(
-  '/',
-  permission(),
+router.post(
+    '',
+    permission(),
+    asyncHandler(async (req: any, res) => {
 
-  asyncHandler(async (req: ProtectedRequest, res) => {
-    await KeystoreRepo.remove(req.keystore._id);
-    new SuccessMsgResponse('Logout success').send(res);
-  }),
+    }),
 );
+
+
 
 export default router;

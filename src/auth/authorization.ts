@@ -1,8 +1,9 @@
 import express from 'express';
 import { ProtectedRequest } from 'app-request';
 import { AuthFailureError } from '../core/ApiError';
-import RoleRepo from '../database/repository/RoleRepo';
+import RoleRepo from '../helpers/calculateField';
 import asyncHandler from '../helpers/asyncHandler';
+import { log } from 'console';
 
 const router = express.Router();
 
@@ -11,22 +12,22 @@ export default router.use(
     if (!req.user || !req.user.roles || !req.currentRoleCodes)
       throw new AuthFailureError('Permission denied');
 
-    const roles = await RoleRepo.findByCodes(req.currentRoleCodes);
-    if (roles.length === 0) throw new AuthFailureError('Permission denied');
+    // const roles = await RoleRepo.findByCodes(req.currentRoleCodes);
+    // if (roles.length === 0) throw new AuthFailureError('Permission denied');
 
-    let authorized = false;
+    // let authorized = false;
 
-    for (const userRole of req.user.roles) {
-      if (authorized) break;
-      for (const role of roles) {
-        if (userRole._id.equals(role._id)) {
-          authorized = true;
-          break;
-        }
-      }
-    }
+    // for (const userRole of req.user.roles) {
+    //   if (authorized) break;
+    //   for (const role of roles) {
+    //     if (userRole._id.equals(role._id)) {
+    //       authorized = true;
+    //       break;
+    //     }
+    //   }
+    // }
 
-    if (!authorized) throw new AuthFailureError('Permission denied');
+    // if (!authorized) throw new AuthFailureError('Permission denied');
 
     return next();
   }),

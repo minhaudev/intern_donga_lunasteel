@@ -5,6 +5,8 @@ export const COLLECTION_NAME = 'api_keys';
 
 export enum Permission {
   GENERAL = 'GENERAL',
+  ADMIN = 'ADMIN',
+  GUEST = 'GUEST',
 }
 
 export default interface ApiKey {
@@ -74,7 +76,7 @@ const schema = new Schema<ApiKey>(
   },
 );
 
-schema.index({ key: 1 }); // status: 1
+schema.index({ key: 1, status: 1 });
 
 export const ApiKeyModel = model<ApiKey>(
   DOCUMENT_NAME,

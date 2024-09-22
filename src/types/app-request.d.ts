@@ -4,9 +4,8 @@ import Keystore from '../database/model/Keystore';
 import ApiKey from '../database/model/ApiKey';
 
 declare interface PublicRequest extends Request {
-  apiKey: ApiKey;
+  apiKey?: ApiKey;
 }
-
 declare interface RoleRequest extends PublicRequest {
   currentRoleCodes: string[];
 }

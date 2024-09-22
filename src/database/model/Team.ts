@@ -1,13 +1,9 @@
 import { Schema, model, Types } from 'mongoose';
 
-export const DOCUMENT_NAME = 'Role';
-export const COLLECTION_NAME = 'roles';
-export enum RoleCode {
-  GENERAL = 'GENERAL',
-  ADMIN = 'ADMIN',
-}
+export const DOCUMENT_NAME = 'Team';
+export const COLLECTION_NAME = 'teams';
 
-export default interface Role {
+export default interface Team {
   _id: Types.ObjectId;
   name: string;
   value: number;
@@ -17,20 +13,23 @@ export default interface Role {
   updatedAt?: Date;
 }
 
-const schema = new Schema<Role>(
+const schema = new Schema<Team>(
   {
     name: {
       type: Schema.Types.String,
       required: true,
       unique: true,
+      maxlength: 255,
     },
     value: {
       type: Schema.Types.Number,
       required: true,
+      maxlength: 255,
     },
     description: {
       type: Schema.Types.String,
       required: true,
+      maxlength: 255,
     },
     status: {
       type: Schema.Types.Boolean,
@@ -54,4 +53,4 @@ const schema = new Schema<Role>(
 
 schema.index({ name: 1, status: 1 });
 
-export const RoleModel = model<Role>(DOCUMENT_NAME, schema, COLLECTION_NAME);
+export const TeamModel = model<Team>(DOCUMENT_NAME, schema, COLLECTION_NAME);

@@ -6,7 +6,6 @@ export const mockFindApiKey = jest.fn(async (key: string) => {
   if (key == API_KEY)
     return {
       key: API_KEY,
-      permissions: ['GENERAL'],
     } as ApiKey;
   else return null;
 });

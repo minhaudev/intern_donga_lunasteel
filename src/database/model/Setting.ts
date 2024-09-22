@@ -1,37 +1,30 @@
 import { Schema, model, Types } from 'mongoose';
 
-export const DOCUMENT_NAME = 'Role';
-export const COLLECTION_NAME = 'roles';
-export enum RoleCode {
-  GENERAL = 'GENERAL',
-  ADMIN = 'ADMIN',
-}
+export const DOCUMENT_NAME = 'Setting';
+export const COLLECTION_NAME = 'settings';
 
-export default interface Role {
+
+export default interface Setting {
   _id: Types.ObjectId;
   name: string;
-  value: number;
-  description: string;
+  data: any;
   status?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-const schema = new Schema<Role>(
+const schema = new Schema<Setting>(
   {
     name: {
       type: Schema.Types.String,
       required: true,
-      unique: true,
+      unique: true
     },
-    value: {
-      type: Schema.Types.Number,
+    data: {
+      type: Schema.Types.Mixed,
       required: true,
     },
-    description: {
-      type: Schema.Types.String,
-      required: true,
-    },
+
     status: {
       type: Schema.Types.Boolean,
       default: true,
@@ -54,4 +47,4 @@ const schema = new Schema<Role>(
 
 schema.index({ name: 1, status: 1 });
 
-export const RoleModel = model<Role>(DOCUMENT_NAME, schema, COLLECTION_NAME);
+export const SettingModel = model<Setting>(DOCUMENT_NAME, schema, COLLECTION_NAME);

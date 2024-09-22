@@ -5,12 +5,12 @@ import mongoose, { Types } from 'mongoose';
 import KeystoreRepo from './KeystoreRepo';
 import Keystore from '../model/Keystore';
 import { random } from 'lodash';
-
+import { v4 as uuidv4 } from 'uuid';
 async function exists(id: Types.ObjectId): Promise<boolean> {
   const user = await UserModel.exists({ _id: id, status: true });
   return user !== null && user !== undefined;
 }
-
+uuidv4();
 async function findPrivateProfileById(
   id: Types.ObjectId,
 ): Promise<User | null> {
@@ -36,13 +36,16 @@ async function findById(id: Types.ObjectId): Promise<User | null> {
     .exec();
 }
 
-async function findByEmail(email: string): Promise<User | null> {
+async function findByEmail(
+  email: string,
+  fields?: string[],
+): Promise<User | null> {
+  const selectFields = fields ? fields.join(' ') : '';
   return UserModel.findOne({ email: email })
-    .select('+email +password +roles +gender')
+    .select(selectFields)
     .populate({
       path: 'roles',
-      // match: { status: true },
-      select: { code: 1 },
+      select: 'code',
     })
     .lean()
     .exec();
@@ -67,45 +70,35 @@ async function create(
 ): Promise<{ user: User; keystore: Keystore }> {
   const now = new Date();
 
-  // Mảng các ID vai trò
-  const roleIds = ['66e14a63af099de6bc59948a', '66e14a63af099de6bc59948b'];
-
-  // Chuyển đổi mảng chuỗi thành mảng ObjectId
-  const roleObjectIds = roleIds.map((id) => new mongoose.Types.ObjectId(id));
-  console.log('roleObjectIds', roleObjectIds);
-  // Cập nhật thông tin người dùng với các giá trị mặc định
-  const updatedUser = {
+  const createUserData = {
     ...user,
-    roles: roleObjectIds,
     createdAt: now,
     updatedAt: now,
     isDeleted: false,
     emailVerifiedAt: null,
     accessToken: accessTokenKey,
     refreshToken: refreshTokenKey,
-    employeeId: user.employeeId || random(1, 10000),
-    fullname: user.fullname || '',
+    employeeId: user.employeeId || uuidv4(),
+    firstName: user.firstName || '',
+    lastName: user.lastName || '',
     password: user.password || '',
     birthday: user.birthday || now,
-    gender: user.gender || 'male', // Đặt giá trị mặc định là 'male' hoặc 'female'
+    gender: user.gender || 'male',
     phone: user.phone || '',
     avatar: user.avatar || '',
     status: user.status || 'inactive',
-    leftBranch: user.leftBranch || '',
-    rightBranch: user.rightBranch || '',
-    departmentId: user.departmentId || null,
+    roles: user.roles || 0,
+    teams: user.teams || 0,
   };
-
   // Tạo người dùng mới
-  const createdUser = await UserModel.create(updatedUser);
-  // console.log("createdUser",createdUser)
-  // Tạo keystore cho người dùng
+  const createdUser = await UserModel.create(createUserData);
+
   const keystore = await KeystoreRepo.create(
     createdUser,
     accessTokenKey,
     refreshTokenKey,
   );
-  console.log(createdUser);
+
   return {
     user: createdUser.toObject(), // Chuyển đối tượng người dùng thành JSON
     keystore: keystore,
@@ -135,9 +128,6 @@ async function updateInfo(user: User): Promise<any> {
     .lean()
     .exec();
 }
-async function findAll(): Promise<User[]> {
-  return UserModel.find().lean().exec();
-}
 
 export default {
   exists,
@@ -149,5 +139,4 @@ export default {
   create,
   update,
   updateInfo,
-  findAll,
 };

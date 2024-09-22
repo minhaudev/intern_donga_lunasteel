@@ -1,13 +1,10 @@
 import { Schema, model, Types } from 'mongoose';
 
-export const DOCUMENT_NAME = 'Role';
-export const COLLECTION_NAME = 'roles';
-export enum RoleCode {
-  GENERAL = 'GENERAL',
-  ADMIN = 'ADMIN',
-}
+export const DOCUMENT_NAME = 'Permission';
+export const COLLECTION_NAME = 'permissions';
 
-export default interface Role {
+
+export default interface Permission {
   _id: Types.ObjectId;
   name: string;
   value: number;
@@ -17,12 +14,12 @@ export default interface Role {
   updatedAt?: Date;
 }
 
-const schema = new Schema<Role>(
+const schema = new Schema<Permission>(
   {
     name: {
       type: Schema.Types.String,
       required: true,
-      unique: true,
+      unique: true
     },
     value: {
       type: Schema.Types.Number,
@@ -54,4 +51,4 @@ const schema = new Schema<Role>(
 
 schema.index({ name: 1, status: 1 });
 
-export const RoleModel = model<Role>(DOCUMENT_NAME, schema, COLLECTION_NAME);
+export const PermissionModel = model<Permission>(DOCUMENT_NAME, schema, COLLECTION_NAME);

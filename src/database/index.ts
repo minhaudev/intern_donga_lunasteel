@@ -6,7 +6,6 @@ import { db } from '../config';
 const dbURI = `mongodb://${db.user}:${encodeURIComponent(db.password)}@${
   db.host
 }:${db.port}/${db.name}`;
-
 const options = {
   autoIndex: true,
   minPoolSize: db.minPoolSize, // Maintain up to x socket connections

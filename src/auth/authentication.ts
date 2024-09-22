@@ -30,6 +30,7 @@ export default router.use(
       req.user = user;
 
       const keystore = await KeystoreRepo.findforKey(req.user, payload.prm);
+
       if (!keystore) throw new AuthFailureError('Invalid access token');
       req.keystore = keystore;
 
