@@ -1,8 +1,8 @@
 import Joi from 'joi';
-import { JoiAuthBearer } from '../../helpers/validator';
+import { JoiAuthBearer, JoiObjectId } from '../../helpers/validator';
 
 const newPasswordSchema = Joi.string()
-  .min(6)
+
   .pattern(
     new RegExp(
       '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{6,}$',
@@ -17,7 +17,7 @@ const newEmailSchema = Joi.string()
   .pattern(new RegExp('^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$'))
   .required()
   .messages({
-    'string.pattern.base': `email is not in the correct format`,
+    'string.pattern.base': `Email is not in the correct format`,
   });
 
 export default {
@@ -27,7 +27,7 @@ export default {
     password: newPasswordSchema,
   }),
   refreshToken: Joi.object().keys({
-    refreshToken: Joi.string().required().min(1),
+    refreshToken: Joi.string().required(),
   }),
   auth: Joi.object()
     .keys({
@@ -50,6 +50,6 @@ export default {
     email: newEmailSchema,
   }),
   token: Joi.object().keys({
-    token: Joi.string().required().min(1),
+    token: Joi.string().required(),
   }),
 };

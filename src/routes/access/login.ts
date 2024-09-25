@@ -10,6 +10,7 @@ import asyncHandler from '../../helpers/asyncHandler';
 import bcrypt from 'bcrypt';
 import { getUserData } from './utils';
 import { PublicRequest } from '../../types/app-request';
+import { model, Schema, Types } from 'mongoose';
 import {
   delByKey,
   getValue,
@@ -18,10 +19,12 @@ import {
 } from '../../cache/query';
 
 const router = express.Router();
-const expire = 600 * 1000;
+// const
+const expire = 10;
+const expire_second = expire * 10 * 1000;
 const maxAttempts = 4;
 router.post(
-  '/login/test',
+  '/login',
   validator(schema.credential),
   asyncHandler(async (req: PublicRequest, res) => {
     const userAgent = req.headers['user-agent'];
@@ -44,7 +47,7 @@ router.post(
 
     if (isLockedUserAgent || isLockedUser) {
       return new BadRequestResponse(
-        'Account is locked. Please wait 10 minutes.',
+        `Account is locked. Please wait ${expire} minutes.`,
       ).send(res);
     }
 
@@ -56,13 +59,13 @@ router.post(
       parseInt(attemptsUser) >= maxAttempts
     ) {
       if (!isLockedUserAgent) {
-        await setValueRedis(lockKeyUserAgent, 'locked', expire);
+        await setValueRedis(lockKeyUserAgent, 'locked', expire_second);
       }
       if (user && !isLockedUser) {
-        await setValueRedis(lockKeyUser, 'locked', expire);
+        await setValueRedis(lockKeyUser, 'locked', expire_second);
       }
       return new BadRequestResponse(
-        'Too many login attempts. Your account is locked for 10 minutes.',
+        `Too many login attempts. Your account is locked for ${expire} minutes.`,
       ).send(res);
     }
 

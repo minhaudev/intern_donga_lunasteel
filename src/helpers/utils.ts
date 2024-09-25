@@ -15,6 +15,9 @@ export function findIpAddress(req: Request) {
     return undefined;
   }
 }
+export function getSelectFields(fields?: string[]): string {
+  return fields ? fields.join(' ') : '';
+}
 
 export function addMillisToCurrentDate(millis: number) {
   return moment().add(millis, 'ms').toDate();

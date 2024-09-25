@@ -29,7 +29,6 @@ export default router.use(
       if (!user) throw new AuthFailureError('User not registered');
 
       req.user = user;
-      req.roles = Number(user.roles);
 
       const keystore = await KeystoreRepo.findforKey(req.user, payload.prm);
 

@@ -8,28 +8,26 @@ import bcrypt from 'bcrypt';
 import { sign } from 'jsonwebtoken';
 import { verify } from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
-import Joi from 'joi';
 import UserRepo from '../../database/repository/UserRepo';
 import { OAuth2Client } from 'google-auth-library';
-import { BadRequestError } from '../../core/ApiError';
-import { UserModel } from '../../database/model/User';
-import validateSchema from '../../helpers/validator';
 import validator from '../../helpers/validator';
-
 import schema from './schema';
-import { getValue, setValue, setValueRedis } from '../../cache/query';
+import { getValue, setValueRedis } from '../../cache/query';
 
 const router = express.Router();
+let myOAuth2Client: OAuth2Client;
+if (process.env.USE_GMAIL === 'true') {
+  const myOAuth2Client = new OAuth2Client(
+    process.env.GOOGLE_MAILER_CLIENT_ID,
+    process.env.GOOGLE_MAILER_CLIENT_SECRET,
+  );
 
-const myOAuth2Client = new OAuth2Client(
-  process.env.GOOGLE_MAILER_CLIENT_ID,
-  process.env.GOOGLE_MAILER_CLIENT_SECRET,
-);
+  myOAuth2Client.setCredentials({
+    refresh_token: process.env.GOOGLE_MAILER_REFRESH_TOKEN,
+  });
+}
 
-myOAuth2Client.setCredentials({
-  refresh_token: process.env.GOOGLE_MAILER_REFRESH_TOKEN,
-});
-const expireAt = new Date(Date.now() + 60 * 1000);
+const expireAt = 600 * 1000;
 router.post(
   '/recover',
   validator(schema.sendemailforgetpassword),
@@ -38,14 +36,12 @@ router.post(
       const { email } = req.body;
 
       const user = await UserRepo.findByEmail(email, ['email', '_id']);
-      console.log('🚀 ~ user:', user);
 
       if (!user) {
         return new BadRequestResponse('Email not found').send(res);
       }
       const rediskey = `reverover_password_${user?._id}`;
       const redisToken = await getValue(rediskey);
-      console.log('redisToken', redisToken);
 
       if (redisToken) {
         return new SuccessMsgResponse(
@@ -55,15 +51,15 @@ router.post(
       const token = sign({ userId: user._id, email: user.email }, 'secret', {
         expiresIn: '10m',
       });
-      await setValueRedis(rediskey, token, 600 * 1000);
+      await setValueRedis(rediskey, token, expireAt);
 
-      const link = `${process.env.RECOVER_PASSWORD}/${token}`;
+      const link = `${process.env.DOMAIN}/${process.env.RECOVER_PASSWORD}/${token}`;
 
       const myAccessTokenObject = await myOAuth2Client.getAccessToken();
-      const myAccessToken = myAccessTokenObject?.token;
+      const accessToken = myAccessTokenObject?.token;
 
-      if (!myAccessToken) {
-        return new BadRequestResponse('can not take token!').send(res);
+      if (!accessToken) {
+        return new BadRequestResponse('Error server').send(res);
       }
       const transport =
         process.env.USE_GMAIL === 'true'
@@ -75,12 +71,12 @@ router.post(
                 clientId: process.env.GOOGLE_MAILER_CLIENT_ID,
                 clientSecret: process.env.GOOGLE_MAILER_CLIENT_SECRET,
                 refreshToken: process.env.GOOGLE_MAILER_REFRESH_TOKEN,
-                accessToken: myAccessToken,
+                accessToken: accessToken,
               },
             })
           : nodemailer.createTransport({
               host: process.env.HOST_EMAIL_SMTP,
-              port: 465,
+              port: process.env.HOST_EMAIL_PORT as unknown as number,
               secure: true,
               auth: {
                 user: process.env.HOST_EMAIL_EMAIL,
@@ -111,45 +107,10 @@ router.post(
         link,
       }).send(res);
     } catch (error) {
-      console.log('error', error);
-
-      return new BadRequestResponse('failed send email!').send(res);
+      return new BadRequestResponse('Failed send email').send(res);
     }
   },
 );
-
-router.get('/checktoken/:token', validator(schema.token), async (req, res) => {
-  const { token } = req.params;
-
-  const decoded = verify(
-    token,
-    'secret',
-    (error, decoded: { email: string }) => {
-      if (error) {
-        if (error.name === 'JsonWebTokenError') {
-          return new BadRequestResponse('Invalid token').send(res);
-        } else if (error.name === 'TokenExpiredError') {
-          return new BadRequestResponse('Token expired').send(res);
-        }
-        return new BadRequestResponse('Token error').send(res);
-      }
-
-      UserRepo.findByEmail(decoded?.email || '', ['email'])
-        .then((user) => {
-          if (!user) {
-            return new BadRequestResponse('Email not found').send(res);
-          }
-
-          return new SuccessResponse('Email found', {
-            token,
-          }).send(res);
-        })
-        .catch((err) => {
-          return new BadRequestResponse('error').send(res);
-        });
-    },
-  );
-});
 
 router.post(
   '/reset-password/:token',
@@ -158,6 +119,15 @@ router.post(
     const { token } = req.params;
     const { newPassword } = req.body;
 
+    verify(token, 'secret', (error) => {
+      if (error) {
+        if (error.name === 'JsonWebTokenError') {
+          return new BadRequestResponse('Invalid token').send(res);
+        } else if (error.name === 'TokenExpiredError') {
+          return new BadRequestResponse('Token expired').send(res);
+        }
+      }
+    });
     const { email } = verify(token, 'secret') as {
       email: string;
     };
@@ -173,11 +143,9 @@ router.post(
       ).send(res);
     }
     const passwordHash = await bcrypt.hash(newPassword, 10);
-    const newUser = await UserModel.findOneAndUpdate(
-      { email },
-      { password: passwordHash },
-      { new: true },
-    );
+    const newUser = await UserRepo.updateInfo(user?._id, {
+      password: passwordHash,
+    });
 
     if (newUser) {
       return new SuccessResponse('Updated password success', {

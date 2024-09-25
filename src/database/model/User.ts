@@ -14,8 +14,8 @@ export default interface User {
   gender?: 'male' | 'female' | 'other';
   phone?: string;
   avatar: string;
-  roles?: number;
-  teams?: number;
+  roles: number;
+  teams: number;
   emailVerifiedAt?: Date | null;
   accessToken: string;
   refreshToken: string;
@@ -30,7 +30,8 @@ const userSchema = new Schema<User>(
     employeeId: {
       type: Schema.Types.String,
       required: true,
-      unique: true,
+      unique: false,
+      trim: true,
       maxlength: 255,
     },
     email: {
@@ -43,14 +44,18 @@ const userSchema = new Schema<User>(
     password: {
       type: Schema.Types.String,
       required: true,
+      trim: true,
+      minlength: 6,
       maxlength: 255,
     },
     firstName: {
       type: Schema.Types.String,
+      trim: true,
       maxlength: 255,
     },
     lastName: {
       type: Schema.Types.String,
+      trim: true,
       maxlength: 255,
     },
     birthday: {
@@ -70,12 +75,12 @@ const userSchema = new Schema<User>(
     },
     roles: {
       type: Schema.Types.Number,
-      default: 0,
+      required: true,
       maxlength: 255,
     },
     teams: {
       type: Schema.Types.Number,
-      default: 0,
+      required: true,
       maxlength: 255,
     },
 
@@ -88,15 +93,18 @@ const userSchema = new Schema<User>(
       type: Schema.Types.String,
       required: true,
       maxlength: 255,
+      minlength: 1,
     },
     refreshToken: {
       type: Schema.Types.String,
       required: true,
       maxlength: 255,
+      minlength: 1,
     },
     status: {
       type: Schema.Types.String,
       enum: ['active', 'inactive'],
+      default: 'active',
     },
     isDeleted: {
       type: Schema.Types.Boolean,

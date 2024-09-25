@@ -1,16 +1,14 @@
 import User, { UserModel } from '../model/User';
-import { RoleModel } from '../model/Role';
-import { InternalError } from '../../core/ApiError';
 import mongoose, { Types } from 'mongoose';
 import KeystoreRepo from './KeystoreRepo';
 import Keystore from '../model/Keystore';
-import { random } from 'lodash';
 import { v4 as uuidv4 } from 'uuid';
+import { getSelectFields } from '../../helpers/utils';
 async function exists(id: Types.ObjectId): Promise<boolean> {
   const user = await UserModel.exists({ _id: id, status: true });
   return user !== null && user !== undefined;
 }
-uuidv4();
+
 async function findPrivateProfileById(
   id: Types.ObjectId,
 ): Promise<User | null> {
@@ -24,9 +22,13 @@ async function findPrivateProfileById(
     .lean<User>()
     .exec();
 }
-async function findById(id: Types.ObjectId): Promise<User | null> {
-  return UserModel.findOne({ _id: id })
-    .select('+email +password +roles')
+async function findById(
+  id: Types.ObjectId,
+  fields?: string[],
+): Promise<User | null> {
+  const selectFields = getSelectFields(fields);
+  return UserModel.findOne({ _id: id, isDeleted: false })
+    .select(selectFields)
     .populate({
       path: 'roles',
     })
@@ -38,7 +40,7 @@ async function findByEmail(
   email: string,
   fields?: string[],
 ): Promise<User | null> {
-  const selectFields = fields ? fields.join(' ') : '';
+  const selectFields = getSelectFields(fields);
   return UserModel.findOne({ email: email, isDeleted: false })
     .select(selectFields)
     .populate({
@@ -76,13 +78,13 @@ async function create(
     firstName: user.firstName || '',
     lastName: user.lastName || '',
     password: user.password || '',
-    birthday: user.birthday || now,
-    gender: user.gender || 'male',
+    birthday: user.birthday || '',
+    gender: user.gender || '',
     phone: user.phone || '',
     avatar: user.avatar || '',
-    status: user.status || 'inactive',
-    roles: user.roles || 0,
-    teams: user.teams || 0,
+    status: user.status || 'active',
+    roles: user.roles,
+    teams: user.teams,
   };
 
   const createdUser = await UserModel.create(createUserData);
@@ -105,7 +107,10 @@ async function update(
   refreshTokenKey: string,
 ): Promise<{ user: User; keystore: Keystore }> {
   user.updatedAt = new Date();
-  await UserModel.updateOne({ _id: user._id }, { $set: { ...user } })
+  await UserModel.updateOne(
+    { _id: user._id, isDeleted: false },
+    { $set: { ...user } },
+  )
     .lean()
     .exec();
   const keystore = await KeystoreRepo.create(
@@ -116,9 +121,34 @@ async function update(
   return { user: user, keystore: keystore };
 }
 
-async function updateInfo(user: User): Promise<any> {
-  user.updatedAt = new Date();
-  return UserModel.updateOne({ _id: user._id }, { $set: { ...user } })
+async function updateInfo(
+  userId: object | Types.ObjectId,
+  updateData: Partial<User>,
+  fields?: string[],
+): Promise<any> {
+  const updatedAt = new Date();
+  const selectFields = getSelectFields(fields);
+  return UserModel.findOneAndUpdate(
+    { _id: userId, isDeleted: false },
+    { $set: { ...updateData, updatedAt } },
+    { new: true },
+  )
+    .select(selectFields)
+    .populate({
+      path: 'roles',
+      select: 'code',
+    })
+    .lean()
+    .exec();
+}
+
+async function deleteUser(userId: Types.ObjectId): Promise<any> {
+  return UserModel.updateOne(
+    { _id: userId, isDeleted: false },
+    { $set: { isDeleted: true } },
+    { new: true },
+  )
+
     .lean()
     .exec();
 }
@@ -133,4 +163,5 @@ export default {
   create,
   update,
   updateInfo,
+  deleteUser,
 };
