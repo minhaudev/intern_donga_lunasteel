@@ -13,14 +13,14 @@ export default interface User {
   birthday?: Date;
   gender?: 'male' | 'female' | 'other';
   phone?: string;
-  avatar: string;
+  avatar?: string;
   roles: number;
   teams: number;
   emailVerifiedAt?: Date | null;
   accessToken: string;
   refreshToken: string;
   status?: 'active' | 'inactive';
-  isDeleted: boolean;
+  isDeleted?: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -93,13 +93,11 @@ const userSchema = new Schema<User>(
       type: Schema.Types.String,
       required: true,
       maxlength: 255,
-      minlength: 1,
     },
     refreshToken: {
       type: Schema.Types.String,
       required: true,
       maxlength: 255,
-      minlength: 1,
     },
     status: {
       type: Schema.Types.String,
