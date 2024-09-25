@@ -26,8 +26,8 @@ async function findByValue(
     },
     {
       $project: {
-        value: 1, // Chỉ lấy field `value`
-        _id: 0, // Không lấy `_id`
+        value: 1,
+        _id: 0,
       },
     },
     {

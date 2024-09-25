@@ -7,7 +7,7 @@ const redisURL = `redis://:${redis.password}@${redis.host}:${redis.port}`;
 const client = createClient({ url: redisURL });
 
 client.on('connect', () => Logger.info('Cache is connecting'));
-client.on('ready', () => Logger.info('Cache is ready'));
+client.on('ready', () => Logger.info('Cache is ready' + redisURL));
 client.on('end', () => Logger.info('Cache disconnected'));
 client.on('reconnecting', () => Logger.info('Cache is reconnecting'));
 client.on('error', (e) => Logger.error(e));

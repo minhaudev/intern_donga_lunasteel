@@ -11,6 +11,7 @@ declare interface RoleRequest extends PublicRequest {
 }
 
 declare interface ProtectedRequest extends RoleRequest {
+  roles: number;
   user: User;
   accessToken: string;
   keystore: Keystore;

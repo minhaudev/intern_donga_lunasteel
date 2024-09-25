@@ -5,13 +5,17 @@ import SettingRepo from '../database/repository/SettingRepo';
 
 export default (permission?: string) =>
   async (req: any, res: Response, next: NextFunction) => {
-    let roles = req.user.roles;
+    //  cleame_role: []
+    let roles = req.roles;
     const method = req.method;
-    const fullPath = `${req.baseUrl}${req.path}`;
+
+    let fullPath = `${req.baseUrl}${req.route.path}`;
+
+    fullPath = fullPath.replace(/\/:[^\/]+/g, '');
+    console.log('fullparh', fullPath);
     const value = await SettingRepo.findUrlByName('URL', fullPath, method);
 
     if (value) {
-      // value từ setting và roles
       if ((roles & Number(value)) > 0) {
         next();
       } else {

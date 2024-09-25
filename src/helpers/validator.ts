@@ -2,6 +2,8 @@ import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 import { BadRequestError } from '../core/ApiError';
 import { Types } from 'mongoose';
+import express from 'express';
+import { BadRequestResponse } from '../../src/core/ApiResponse';
 export enum ValidationSource {
   BODY = 'body',
   HEADER = 'headers',
@@ -49,8 +51,6 @@ export default (
     }
   };
 
-// validate id
-
 async function findFieldsById(
   id: Types.ObjectId,
   model: any,
@@ -63,7 +63,7 @@ export const validateIds = async (ids: string[], model: any) => {
   for (const id of ids) {
     if (!Types.ObjectId.isValid(id)) {
       invalidIds.push(id);
-      continue; // Bỏ qua kiểm tra tồn tại nếu ID không hợp lệ
+      continue;
     }
 
     const exists = await findFieldsById(new Types.ObjectId(id), model);

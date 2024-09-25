@@ -16,13 +16,9 @@ const router = express.Router();
 /*-------------------------------------------------------------------------*/
 
 router.post(
-    '',
-    permission(),
-    asyncHandler(async (req: any, res) => {
-
-    }),
+  '',
+  // permission(),
+  asyncHandler(async (req: any, res) => {}),
 );
-
-
 
 export default router;

@@ -1,5 +1,8 @@
 export enum Key {
+  LOGIN_ATTEMPTS = 'login_attempts',
+  ACCOUNT_LOCKED = 'account_locked',
   BLOGS_LATEST = 'BLOGS_LATEST',
+  REDIS_KEY = 'REDIS_KEY',
 }
 
 export enum DynamicKey {

@@ -24,8 +24,6 @@ async function findPrivateProfileById(
     .lean<User>()
     .exec();
 }
-
-// contains critical information of the user
 async function findById(id: Types.ObjectId): Promise<User | null> {
   return UserModel.findOne({ _id: id })
     .select('+email +password +roles')
@@ -41,7 +39,7 @@ async function findByEmail(
   fields?: string[],
 ): Promise<User | null> {
   const selectFields = fields ? fields.join(' ') : '';
-  return UserModel.findOne({ email: email })
+  return UserModel.findOne({ email: email, isDeleted: false })
     .select(selectFields)
     .populate({
       path: 'roles',
@@ -52,16 +50,12 @@ async function findByEmail(
 }
 
 async function findFieldsById(id: Types.ObjectId): Promise<User | null> {
-  return UserModel.findOne({ _id: id })
-    .lean() // Chuyển đổi tài liệu Mongoose thành đối tượng đơn giản
-    .exec(); // Thực thi truy vấn và trả về một promise
+  return UserModel.findOne({ _id: id }).lean().exec();
 }
 
 async function findPublicProfileById(id: Types.ObjectId): Promise<User | null> {
   return UserModel.findOne({ _id: id, status: true }).lean().exec();
 }
-
-// Import mongoose để sử dụng ObjectId
 
 async function create(
   user: Partial<User>,
@@ -90,7 +84,7 @@ async function create(
     roles: user.roles || 0,
     teams: user.teams || 0,
   };
-  // Tạo người dùng mới
+
   const createdUser = await UserModel.create(createUserData);
 
   const keystore = await KeystoreRepo.create(
@@ -100,7 +94,7 @@ async function create(
   );
 
   return {
-    user: createdUser.toObject(), // Chuyển đối tượng người dùng thành JSON
+    user: createdUser.toObject(),
     keystore: keystore,
   };
 }

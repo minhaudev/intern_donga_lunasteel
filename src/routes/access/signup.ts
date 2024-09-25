@@ -27,6 +27,7 @@ router.post(
   authentication,
   permission(),
   validator(schema.signup),
+  // clame_role
   asyncHandler(async (req, res) => {
     const { firstName, lastName, email, password, roles, teams } = req.body;
 
@@ -47,6 +48,7 @@ router.post(
     const accessTokenKey = crypto.randomBytes(64).toString('hex');
     const refreshTokenKey = crypto.randomBytes(64).toString('hex');
     const passwordHash = await bcrypt.hash(password, 10);
+
     const { user: createdUser, keystore } = await UserRepo.create(
       {
         firstName,

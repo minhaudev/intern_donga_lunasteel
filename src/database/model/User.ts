@@ -25,7 +25,6 @@ export default interface User {
   updatedAt: Date;
 }
 
-// Định nghĩa schema cho User
 const userSchema = new Schema<User>(
   {
     employeeId: {
@@ -36,8 +35,8 @@ const userSchema = new Schema<User>(
     },
     email: {
       type: Schema.Types.String,
+      unique: false,
       required: true,
-      unique: true,
       trim: true,
       maxlength: 255,
     },
@@ -119,11 +118,9 @@ const userSchema = new Schema<User>(
   },
 );
 
-// Indexes để tối ưu hóa truy vấn
 userSchema.index({ employeeId: 1 });
 userSchema.index({ email: 1 });
 
-// Xuất mô hình User
 export const UserModel = model<User>(
   DOCUMENT_NAME,
   userSchema,

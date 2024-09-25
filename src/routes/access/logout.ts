@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.delete(
   '/',
-  permission(),
+  // permission(),
 
   asyncHandler(async (req: ProtectedRequest, res) => {
     await KeystoreRepo.remove(req.keystore._id);

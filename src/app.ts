@@ -50,5 +50,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     ApiError.handle(new InternalError(), res);
   }
 });
+console.log('🚀 ~ app:', app);
 
 export default app;

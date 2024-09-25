@@ -14,7 +14,7 @@ export async function keyExists(...keys: string[]) {
 }
 
 export async function setValue(
-  key: Key | DynamicKeyType,
+  key: Key | DynamicKeyType | string,
   value: string | number,
   expireAt: Date | null = null,
 ) {
@@ -22,12 +22,25 @@ export async function setValue(
   else return cache.set(key, `${value}`);
 }
 
-export async function getValue(key: Key | DynamicKeyType) {
+export async function setValueRedis(
+  key: Key | DynamicKeyType | string,
+  value: string | number,
+  expireInSeconds: number | null = null,
+) {
+  if (expireInSeconds) return cache.pSetEx(key, expireInSeconds, `${value}`);
+  else return cache.set(key, `${value}`);
+}
+
+export async function getValue(key: Key | DynamicKeyType | string) {
   return cache.get(key);
 }
 
-export async function delByKey(key: Key | DynamicKeyType) {
+export async function delByKey(key: Key | DynamicKeyType | string) {
   return cache.del(key);
+}
+export async function incrementLoginAttempts(redisKey: string) {
+  const currentAttempts = (await getValue(redisKey)) || '0';
+  await setValueRedis(redisKey, parseInt(currentAttempts) + 1, 600 * 1000);
 }
 
 export async function setJson(
@@ -55,7 +68,7 @@ export async function setList(
   expireAt: Date | null = null,
 ) {
   const multi = cache.multi();
-  const values: any[] = []
+  const values: any[] = [];
   for (const i in list) {
     values[i] = JSON.stringify(list[i]);
   }

@@ -1,118 +1,98 @@
 import express from 'express';
-import { BadRequestResponse, SuccessResponse } from '../../core/ApiResponse';
+import {
+  BadRequestResponse,
+  SuccessMsgResponse,
+  SuccessResponse,
+} from '../../core/ApiResponse';
 import bcrypt from 'bcrypt';
 import { sign } from 'jsonwebtoken';
 import { verify } from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import Joi from 'joi';
 import UserRepo from '../../database/repository/UserRepo';
-import {
-  forgetPasswordSchema,
-  checkPasswordSchema,
-  updatePasswordSchema,
-} from '../../auth/schema';
 import { OAuth2Client } from 'google-auth-library';
 import { BadRequestError } from '../../core/ApiError';
 import { UserModel } from '../../database/model/User';
+import validateSchema from '../../helpers/validator';
+import validator from '../../helpers/validator';
 
-// Khởi tạo router
+import schema from './schema';
+import { getValue, setValue, setValueRedis } from '../../cache/query';
+
 const router = express.Router();
 
-// Thông tin OAuth2 và cấu hình email
-const GOOGLE_MAILER_CLIENT_ID = process.env.GOOGLE_MAILER_CLIENT_ID;
-const GOOGLE_MAILER_CLIENT_SECRET = process.env.GOOGLE_MAILER_CLIENT_SECRET;
-const GOOGLE_MAILER_REFRESH_TOKEN = process.env.GOOGLE_MAILER_REFRESH_TOKEN;
-const ADMIN_EMAIL_ADDRESS = process.env.ADMIN_EMAIL_ADDRESS;
-const HOST_EMAIL_SMTP = process.env.HOST_EMAIL_SMTP;
-const HOST_EMAIL_PASSWORD = process.env.HOST_EMAIL_PASSWORD;
-const HOST_EMAIL_EMAIL = process.env.HOST_EMAIL_EMAIL;
-// Khởi tạo OAuth2Client với Client ID và Client Secret
 const myOAuth2Client = new OAuth2Client(
-  GOOGLE_MAILER_CLIENT_ID,
-  GOOGLE_MAILER_CLIENT_SECRET,
+  process.env.GOOGLE_MAILER_CLIENT_ID,
+  process.env.GOOGLE_MAILER_CLIENT_SECRET,
 );
 
-// Set Refresh Token vào OAuth2Client Credentials
 myOAuth2Client.setCredentials({
-  refresh_token: GOOGLE_MAILER_REFRESH_TOKEN,
+  refresh_token: process.env.GOOGLE_MAILER_REFRESH_TOKEN,
 });
-
-// Middleware để validate schema
-const validateSchema =
-  (schema: Joi.ObjectSchema<any>) =>
-  (req: express.Request, res: express.Response, next: express.NextFunction) => {
-    const { error } = schema.validate(req.body);
-    if (error) {
-      return new BadRequestResponse(error.details[0].message).send(res);
-    }
-    next();
-  };
-
-// Route /recover để gửi email khôi phục mật khẩu
+const expireAt = new Date(Date.now() + 60 * 1000);
 router.post(
   '/recover',
-  validateSchema(forgetPasswordSchema),
+  validator(schema.sendemailforgetpassword),
   async (req, res) => {
     try {
       const { email } = req.body;
 
-      // Tìm user theo email
-      const user = await UserRepo.findByEmail(email, [
-        'email',
-        'password',
-        'roles',
-        'gender',
-      ]);
+      const user = await UserRepo.findByEmail(email, ['email', '_id']);
+      console.log('🚀 ~ user:', user);
+
       if (!user) {
         return new BadRequestResponse('Email not found').send(res);
       }
+      const rediskey = `reverover_password_${user?._id}`;
+      const redisToken = await getValue(rediskey);
+      console.log('redisToken', redisToken);
 
-      // Tạo token
+      if (redisToken) {
+        return new SuccessMsgResponse(
+          'Please check your email for recovery instructions',
+        ).send(res);
+      }
       const token = sign({ userId: user._id, email: user.email }, 'secret', {
-        expiresIn: '30m',
+        expiresIn: '10m',
       });
+      await setValueRedis(rediskey, token, 600 * 1000);
 
-      // Tạo link khôi phục
       const link = `${process.env.RECOVER_PASSWORD}/${token}`;
 
-      // Lấy AccessToken từ OAuth2Client
       const myAccessTokenObject = await myOAuth2Client.getAccessToken();
       const myAccessToken = myAccessTokenObject?.token;
 
       if (!myAccessToken) {
         return new BadRequestResponse('can not take token!').send(res);
       }
-
-      // Cấu hình Nodemailer với OAuth2
       const transport =
         process.env.USE_GMAIL === 'true'
           ? nodemailer.createTransport({
               service: 'gmail',
               auth: {
                 type: 'OAuth2',
-                user: ADMIN_EMAIL_ADDRESS,
-                clientId: GOOGLE_MAILER_CLIENT_ID,
-                clientSecret: GOOGLE_MAILER_CLIENT_SECRET,
-                refreshToken: GOOGLE_MAILER_REFRESH_TOKEN,
+                user: process.env.ADMIN_EMAIL_ADDRESS,
+                clientId: process.env.GOOGLE_MAILER_CLIENT_ID,
+                clientSecret: process.env.GOOGLE_MAILER_CLIENT_SECRET,
+                refreshToken: process.env.GOOGLE_MAILER_REFRESH_TOKEN,
                 accessToken: myAccessToken,
               },
             })
           : nodemailer.createTransport({
-              host: HOST_EMAIL_SMTP,
-              port: 465, // Cổng SMTP
-              secure: true, // true nếu sử dụng SSL/TLS
+              host: process.env.HOST_EMAIL_SMTP,
+              port: 465,
+              secure: true,
               auth: {
-                user: HOST_EMAIL_EMAIL, // Email đăng nhập
-                pass: HOST_EMAIL_PASSWORD, // Mật khẩu
+                user: process.env.HOST_EMAIL_EMAIL,
+                pass: process.env.HOST_EMAIL_PASSWORD,
               },
             });
 
-      // Tạo thông tin email
       const mailOptions = {
         from:
           process.env.USE_GMAIL === 'true'
-            ? ADMIN_EMAIL_ADDRESS
-            : HOST_EMAIL_EMAIL,
+            ? process.env.ADMIN_EMAIL_ADDRESS
+            : process.env.HOST_EMAIL_EMAIL,
         to: email,
         subject: 'Recover Password',
         text: 'Thay đổi mật khẩu LUNA',
@@ -125,97 +105,84 @@ router.post(
         `,
       };
 
-      // Gửi email
       await transport.sendMail(mailOptions);
 
-      // Trả về response success
       return new SuccessResponse('Send email success', {
         link,
       }).send(res);
     } catch (error) {
+      console.log('error', error);
+
       return new BadRequestResponse('failed send email!').send(res);
     }
   },
 );
 
-// Route /checkpassword để kiểm tra token
-router.get('/checkpassword/:token', async (req, res) => {
-  const { error } = checkPasswordSchema.validate(req.params);
-  if (error) {
-    return new BadRequestResponse(error.details[0].message).send(res);
-  }
+router.get('/checktoken/:token', validator(schema.token), async (req, res) => {
+  const { token } = req.params;
 
-  try {
-    const { token } = req.params;
+  const decoded = verify(
+    token,
+    'secret',
+    (error, decoded: { email: string }) => {
+      if (error) {
+        if (error.name === 'JsonWebTokenError') {
+          return new BadRequestResponse('Invalid token').send(res);
+        } else if (error.name === 'TokenExpiredError') {
+          return new BadRequestResponse('Token expired').send(res);
+        }
+        return new BadRequestResponse('Token error').send(res);
+      }
 
-    const decoded = verify(token, 'secret') as {
-      userId: string;
-      email: string;
-    };
-    const { email } = decoded;
-    const user = await UserRepo.findByEmail(email, [
-      'email',
-      'password',
-      'roles',
-      'gender',
-    ]);
+      UserRepo.findByEmail(decoded?.email || '', ['email'])
+        .then((user) => {
+          if (!user) {
+            return new BadRequestResponse('Email not found').send(res);
+          }
 
-    if (!user) {
-      return new BadRequestResponse('Email not found').send(res);
-    }
-
-    // Nếu tìm thấy email, phản hồi thành công
-    return new SuccessResponse('Email found', {
-      token,
-    }).send(res);
-  } catch (error) {
-    if (error instanceof Error && error.name === 'JsonWebTokenError') {
-      return new BadRequestResponse('Invalid token').send(res);
-    } else if (error instanceof Error && error.name === 'TokenExpiredError') {
-      return new BadRequestResponse('Token expired').send(res);
-    } else {
-      return new BadRequestResponse('Invalid token or error').send(res);
-    }
-  }
+          return new SuccessResponse('Email found', {
+            token,
+          }).send(res);
+        })
+        .catch((err) => {
+          return new BadRequestResponse('error').send(res);
+        });
+    },
+  );
 });
 
-// Route /reset-password để đặt lại mật khẩu
 router.post(
   '/reset-password/:token',
-  validateSchema(updatePasswordSchema),
+  validator(schema.newpassword),
   async (req, res) => {
-    const { error } = updatePasswordSchema.validate(req.body);
-    if (error) {
-      return new BadRequestResponse(error.details[0].message).send(res);
-    }
     const { token } = req.params;
-    const { newPassword, conformPassword } = req.body;
+    const { newPassword } = req.body;
 
     const { email } = verify(token, 'secret') as {
-      userId: string;
       email: string;
     };
-    const user = await UserRepo.findByEmail(email, ['email', 'roles']);
+    const user = await UserRepo.findByEmail(email, ['email', 'password']);
+
     if (!user) {
       return new BadRequestResponse('User not found').send(res);
     }
+    const match = await bcrypt.compare(newPassword, user?.password);
+    if (match) {
+      return new BadRequestResponse(
+        'New password is same with old password',
+      ).send(res);
+    }
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    const newUser = await UserModel.findOneAndUpdate(
+      { email },
+      { password: passwordHash },
+      { new: true },
+    );
 
-    if (newPassword === conformPassword) {
-      const passwordHash = await bcrypt.hash(newPassword, 10);
-      // Cập nhật mật khẩu mới của người dùng trong cơ sở dữ liệu
-      const newUser = await UserModel.findOneAndUpdate(
-        { email },
-        { password: passwordHash },
-        { new: true },
-      );
-
-      if (newUser) {
-        return new SuccessResponse('Updated password success', {
-          newUser,
-        }).send(res);
-      }
-    } else {
-      return new BadRequestResponse('Passwords do not match').send(res);
+    if (newUser) {
+      return new SuccessResponse('Updated password success', {
+        newUser,
+      }).send(res);
     }
   },
 );
