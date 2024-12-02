@@ -79,7 +79,7 @@ async function create(
     lastName: user.lastName || '',
     password: user.password || '',
     birthday: user.birthday || '',
-    gender: user.gender || '',
+    gender: user.gender || 'male',
     phone: user.phone || '',
     avatar: user.avatar || '',
     status: user.status || 'active',

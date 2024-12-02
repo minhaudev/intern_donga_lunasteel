@@ -3,15 +3,15 @@ import { JoiAuthBearer, JoiObjectId } from '../../helpers/validator';
 
 const newPasswordSchema = Joi.string()
 
-  .pattern(
-    new RegExp(
-      '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{6,}$',
-    ),
-  )
-  .required()
-  .messages({
-    'string.pattern.base': `Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character (@$!%*?&)`,
-  });
+  // .pattern(
+  //   new RegExp(
+  //     '^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d)(?=.*[@$!%*?&])[A-Za-z\\d@$!%*?&]{6,}$',
+  //   ),
+  // )
+  .required();
+// .messages({
+//   'string.pattern.base': `Password must contain at least one lowercase letter, one uppercase letter, one digit, and one special character (@$!%*?&)`,
+// });
 
 const newEmailSchema = Joi.string()
   .pattern(new RegExp('^[\\w-\\.]+@([\\w-]+\\.)+[\\w-]{2,4}$'))
@@ -41,6 +41,9 @@ export default {
     password: newPasswordSchema,
     roles: Joi.array(),
     teams: Joi.array(),
+    gender: Joi.string().valid('male', 'female', 'other').required().messages({
+      'any.only': 'Gender must be one of [male, female, other]',
+    }),
   }),
 
   newpassword: Joi.object().keys({

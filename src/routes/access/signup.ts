@@ -29,7 +29,9 @@ router.post(
   validator(schema.signup),
   // clame_role
   asyncHandler(async (req, res) => {
-    const { firstName, lastName, email, password, roles, teams } = req.body;
+    const { firstName, lastName, email, gender, password, roles, teams } =
+      req.body;
+    console.log('data sign up', req.body);
 
     const user = await UserRepo.findByEmail(req.body.email, ['email']);
     if (user?.email === email) {
@@ -54,10 +56,11 @@ router.post(
         firstName,
         lastName,
         email,
+        gender,
         password: passwordHash,
         roles: rolesData,
         teams: teamsData,
-      } as User,
+      },
       accessTokenKey,
       refreshTokenKey,
     );
@@ -71,6 +74,7 @@ router.post(
       '_id',
       'firstName',
       'lastName',
+      'gender',
       'avatar',
       'email',
       'roles',

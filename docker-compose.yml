@@ -58,7 +58,7 @@ services:
       - '$REDIS_PORT:6379'
     command: redis-server --save 20 1 --loglevel warning --requirepass $REDIS_PASSWORD
     volumes:
-      - cache:/data/cache
+      - cache:/data/cachea
 
 # Our top-level volumes key defines the volumes dbdata.
 # When Docker creates volumes, the contents of the volume are stored in a part of the host filesystem, /var/lib/docker/volumes/, that’s managed by Docker.

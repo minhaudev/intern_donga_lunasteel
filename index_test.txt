@@ -1,0 +1,28 @@
+[  [],
+  [1],
+  [1, 2],
+  [1, 2, 3],
+  [1, 3],
+  [2],
+  [2, 3],
+  [3]
+]
+findSubsets([5, 4,4,1,1,1])
+
+[]
+[5]
+[5,4]
+[]
+
+
+// Tổ hợp hiện tại: []
+// Chọn phần tử: A (1kg) -> [A]
+// Chọn phần tử tiếp: B (4kg) -> [A, B]
+// Chọn phần tử tiếp: C (3kg) -> [A, B, C] (Tổng 8kg)
+
+// Backtrack: Loại bỏ C -> [A, B]
+// Chọn phần tử tiếp: D (5kg) -> [A, B, D] (Tổng 10kg, quá mục tiêu)
+
+// Backtrack: Loại bỏ D -> [A, B]
+// Loại bỏ B -> [A]
+....

@@ -13,20 +13,21 @@ import { OAuth2Client } from 'google-auth-library';
 import validator from '../../helpers/validator';
 import schema from './schema';
 import { getValue, setValueRedis } from '../../cache/query';
+import { google } from 'googleapis';
 
 const router = express.Router();
-let myOAuth2Client: OAuth2Client;
-if (process.env.USE_GMAIL === 'true') {
-  const myOAuth2Client = new OAuth2Client(
-    process.env.GOOGLE_MAILER_CLIENT_ID,
-    process.env.GOOGLE_MAILER_CLIENT_SECRET,
-  );
 
-  myOAuth2Client.setCredentials({
-    refresh_token: process.env.GOOGLE_MAILER_REFRESH_TOKEN,
-  });
-}
+const oAuth2Client = new google.auth.OAuth2(
+  process.env.GOOGLE_MAILER_CLIENT_ID,
+  process.env.GOOGLE_MAILER_CLIENT_SECRET,
+  process.env.REDIRECT_URI,
+);
+oAuth2Client.setCredentials({
+  refresh_token: process.env.GOOGLE_MAILER_REFRESH_TOKEN,
+});
+// const sendEmail = () => {
 
+// }
 const expireAt = 600 * 1000;
 router.post(
   '/recover',
@@ -34,8 +35,10 @@ router.post(
   async (req, res) => {
     try {
       const { email } = req.body;
+      console.log(email);
 
       const user = await UserRepo.findByEmail(email, ['email', '_id']);
+      console.log('user', user);
 
       if (!user) {
         return new BadRequestResponse('Email not found').send(res);
@@ -51,38 +54,26 @@ router.post(
       const token = sign({ userId: user._id, email: user.email }, 'secret', {
         expiresIn: '10m',
       });
-      await setValueRedis(rediskey, token, expireAt);
 
       const link = `${process.env.DOMAIN}/${process.env.RECOVER_PASSWORD}/${token}`;
+      console.log('link', link);
 
-      const myAccessTokenObject = await myOAuth2Client.getAccessToken();
-      const accessToken = myAccessTokenObject?.token;
+      const accessToken = (await oAuth2Client.getAccessToken())?.token;
 
       if (!accessToken) {
         return new BadRequestResponse('Error server').send(res);
       }
-      const transport =
-        process.env.USE_GMAIL === 'true'
-          ? nodemailer.createTransport({
-              service: 'gmail',
-              auth: {
-                type: 'OAuth2',
-                user: process.env.ADMIN_EMAIL_ADDRESS,
-                clientId: process.env.GOOGLE_MAILER_CLIENT_ID,
-                clientSecret: process.env.GOOGLE_MAILER_CLIENT_SECRET,
-                refreshToken: process.env.GOOGLE_MAILER_REFRESH_TOKEN,
-                accessToken: accessToken,
-              },
-            })
-          : nodemailer.createTransport({
-              host: process.env.HOST_EMAIL_SMTP,
-              port: process.env.HOST_EMAIL_PORT as unknown as number,
-              secure: true,
-              auth: {
-                user: process.env.HOST_EMAIL_EMAIL,
-                pass: process.env.HOST_EMAIL_PASSWORD,
-              },
-            });
+      const transport = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          type: 'OAuth2',
+          user: process.env.SEENDER,
+          clientId: process.env.GOOGLE_MAILER_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_MAILER_CLIENT_SECRET,
+          refreshToken: process.env.GOOGLE_MAILER_REFRESH_TOKEN,
+          accessToken: accessToken,
+        },
+      });
 
       const mailOptions = {
         from:
@@ -102,6 +93,7 @@ router.post(
       };
 
       await transport.sendMail(mailOptions);
+      await setValueRedis(rediskey, token, expireAt);
 
       return new SuccessResponse('Send email success', {
         link,
